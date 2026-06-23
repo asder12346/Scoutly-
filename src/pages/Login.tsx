@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -82,11 +82,18 @@ export default function Login() {
             </div>
           </form>
           
-          <div className="mt-8 text-center text-sm">
-            <span className="text-slate-500">Don't have an account? </span>
-            <Link to="/signup" className="font-bold text-[#22C55E] hover:text-green-600 transition-colors">
-              Sign up
-            </Link>
+          <div className="mt-8 text-center text-sm flex flex-col space-y-3">
+            <div>
+              <Link to="/forgot-password" className="font-bold text-slate-500 hover:text-slate-900 transition-colors">
+                Forgot your password?
+              </Link>
+            </div>
+            <div>
+              <span className="text-slate-500">Don't have an account? </span>
+              <Link to="/signup" className="font-bold text-[#22C55E] hover:text-green-600 transition-colors">
+                Sign up
+              </Link>
+            </div>
           </div>
         </div>
       </div>

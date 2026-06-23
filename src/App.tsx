@@ -6,8 +6,10 @@ import { Session } from '@supabase/supabase-js';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
 import ProfileView from './pages/ProfileView';
 import ProfileForm from './pages/ProfileForm';
+import BrowsePlayers from './pages/BrowsePlayers';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -37,12 +39,15 @@ export default function App() {
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" />} />
         <Route path="/signup" element={!session ? <Signup /> : <Navigate to="/" />} />
+        <Route path="/forgot-password" element={!session ? <ForgotPassword /> : <Navigate to="/" />} />
         
         {/* Protected Routes */}
         <Route element={session ? <Layout /> : <Navigate to="/login" />}>
           <Route path="/" element={<Navigate to="/profile" />} />
           <Route path="/profile" element={<ProfileView session={session!} />} />
+          <Route path="/profile/:id" element={<ProfileView session={session!} />} />
           <Route path="/profile/edit" element={<ProfileForm session={session!} />} />
+          <Route path="/browse" element={<BrowsePlayers session={session!} />} />
         </Route>
       </Routes>
     </BrowserRouter>

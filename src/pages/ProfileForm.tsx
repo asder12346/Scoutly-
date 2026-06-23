@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
 interface ProfileFormProps {
   session: Session;
@@ -28,8 +29,12 @@ export default function ProfileForm({ session }: ProfileFormProps) {
     goals: 0,
     assists: 0,
     matches_played: 0,
-    clean_sheets: 0
+    clean_sheets: 0,
+    avatar_url: ''
   });
+  
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function checkProfile() {
@@ -57,7 +62,8 @@ export default function ProfileForm({ session }: ProfileFormProps) {
             goals: data.goals || 0,
             assists: data.assists || 0,
             matches_played: data.matches_played || 0,
-            clean_sheets: data.clean_sheets || 0
+            clean_sheets: data.clean_sheets || 0,
+            avatar_url: data.avatar_url || ''
           });
           setIsUpdating(true);
         }
@@ -79,6 +85,38 @@ export default function ProfileForm({ session }: ProfileFormProps) {
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value ? parseInt(value, 10) : '' }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploadingImage(true);
+      setError(null);
+      
+      if (!e.target.files || e.target.files.length === 0) {
+        throw new Error('You must select an image to upload.');
+      }
+
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${session.user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      let { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      
+      setFormData(prev => ({ ...prev, avatar_url: data.publicUrl }));
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +156,23 @@ export default function ProfileForm({ session }: ProfileFormProps) {
 
   if (loading) return <div className="text-center py-20 text-slate-500 font-medium animate-pulse">Loading...</div>;
 
+  const calculateProgress = () => {
+    const fieldsToTrack = [
+      'full_name', 'position', 'secondary_position', 'nationality',
+      'date_of_birth', 'preferred_foot', 'height_cm', 'weight_kg',
+      'current_club', 'bio', 'highlight_video_url', 'avatar_url'
+    ];
+    let filled = 0;
+    fieldsToTrack.forEach(field => {
+      if (formData[field as keyof typeof formData]) {
+        filled++;
+      }
+    });
+    return Math.round((filled / fieldsToTrack.length) * 100);
+  };
+
+  const progress = calculateProgress();
+
   return (
     <div className="bg-white px-5 py-6 shadow-sm border border-slate-100 rounded-[2rem] sm:p-8 mb-8 pb-10">
       <div className="border-b border-slate-100 pb-5 mb-6">
@@ -127,6 +182,16 @@ export default function ProfileForm({ session }: ProfileFormProps) {
         <p className="mt-1.5 text-sm text-slate-500 font-medium">
           This information will be displayed on your player card.
         </p>
+
+        <div className="mt-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Profile Completeness</span>
+            <span className="text-sm font-bold text-[#22C55E]">{progress}%</span>
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div className="bg-[#22C55E] h-2.5 rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
+          </div>
+        </div>
       </div>
       
       <div className="mt-5">
@@ -138,6 +203,32 @@ export default function ProfileForm({ session }: ProfileFormProps) {
           )}
 
           <div className="grid grid-cols-6 gap-y-6 gap-x-4">
+            <div className="col-span-6 flex flex-col items-center mb-2">
+              <div className="w-24 h-24 bg-slate-100 rounded-full mb-3 border-4 border-white shadow-sm flex items-center justify-center text-slate-400 overflow-hidden">
+                 {formData.avatar_url ? (
+                   <img src={formData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                 ) : (
+                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                 )}
+              </div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageUpload} 
+                disabled={uploadingImage}
+                ref={fileInputRef}
+                className="hidden"
+              />
+              <button 
+                type="button" 
+                disabled={uploadingImage}
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs font-bold text-[#22C55E] uppercase tracking-wider bg-green-50 px-3 py-1.5 rounded-full hover:bg-green-100 transition-colors"
+               >
+                {uploadingImage ? 'Uploading...' : 'Change Photo'}
+               </button>
+            </div>
+
             <div className="col-span-6">
               <label className="block text-sm font-bold text-slate-700 ml-1 mb-1.5">Full name *</label>
               <input

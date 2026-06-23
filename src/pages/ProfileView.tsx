@@ -1,8 +1,8 @@
 // src/pages/ProfileView.tsx
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Session } from '@supabase/supabase-js';
-import { Edit2, ExternalLink, User } from 'lucide-react';
+import { Edit2, ExternalLink, User, Share, Check } from 'lucide-react';
 
 interface ProfileViewProps {
   session: Session;
@@ -12,20 +12,24 @@ export default function ProfileView({ session }: ProfileViewProps) {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
+  const { id } = useParams();
 
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const response = await fetch('/api/players/me', {
+        const endpoint = id ? `/api/players/${id}` : '/api/players/me';
+        const response = await fetch(endpoint, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`
           }
         });
         
         if (response.status === 404) {
-          // If no profile, redirect to create
-          navigate('/profile/edit');
+          // If viewing own profile and not found, redirect to create
+          if (!id) navigate('/profile/edit');
+          else setError('Profile not found.');
           return;
         }
         
@@ -43,7 +47,16 @@ export default function ProfileView({ session }: ProfileViewProps) {
     }
     
     fetchProfile();
-  }, [session, navigate]);
+  }, [session, navigate, id]);
+
+  const handleShare = () => {
+    const profileId = profile.id;
+    const url = `${window.location.origin}/profile/${profileId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   if (loading) return <div className="text-center py-20 text-slate-500 font-medium animate-pulse">Loading profile...</div>;
   if (error) return <div className="text-red-500 py-10 bg-red-50 rounded-xl border border-red-100 p-4 text-center">{error}</div>;
@@ -51,14 +64,39 @@ export default function ProfileView({ session }: ProfileViewProps) {
 
   return (
     <div className="space-y-6 pb-12">
-      <div className="text-center pt-2">
-        <div className="w-24 h-24 bg-slate-200 rounded-full mx-auto mb-4 border-4 border-white shadow-sm flex items-center justify-center text-slate-400">
-          <User className="w-10 h-10" />
+      {/* Action Bar */}
+      <div className="flex justify-end pt-1">
+        <button 
+          onClick={handleShare}
+          className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors"
+        >
+          {copied ? <Check className="w-4 h-4 text-[#22C55E]" /> : <Share className="w-4 h-4" />}
+          <span>{copied ? 'Copied Link!' : 'Share Profile'}</span>
+        </button>
+      </div>
+
+      <div className="text-center">
+        <div className="w-28 h-28 bg-slate-200 rounded-full mx-auto mb-4 border-4 border-white shadow-sm flex items-center justify-center text-slate-400 overflow-hidden">
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            <User className="w-12 h-12" />
+          )}
         </div>
-        <h3 className="font-bold text-2xl text-slate-900">{profile.full_name}</h3>
-        <p className="text-slate-500 text-sm mt-1 font-medium">
-          {profile.position}{profile.secondary_position ? ` / ${profile.secondary_position}` : ''}{profile.current_club && ` • ${profile.current_club}`}
-        </p>
+        <h3 className="font-extrabold text-3xl tracking-tight text-slate-900">{profile.full_name}</h3>
+      </div>
+
+      {/* Quick Stats Bar */}
+      <div className="bg-slate-900 text-white rounded-[2rem] p-5 shadow-lg border border-slate-800 flex justify-around items-center">
+        <div className="text-center flex-1">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Position</p>
+          <p className="font-bold">{profile.position || 'N/A'}</p>
+        </div>
+        <div className="w-px h-10 bg-slate-800"></div>
+        <div className="text-center flex-1">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Club</p>
+          <p className="font-bold text-[#22C55E]">{profile.current_club || 'Free Agent'}</p>
+        </div>
       </div>
 
       {(profile.goals > 0 || profile.assists > 0 || profile.matches_played > 0 || profile.clean_sheets > 0) && (

@@ -76,7 +76,7 @@ async function startServer() {
       const { 
         full_name, date_of_birth, nationality, position, 
         secondary_position, preferred_foot, height_cm, 
-        weight_kg, current_club, bio, highlight_video_url,
+        weight_kg, current_club, bio, highlight_video_url, avatar_url,
         goals, assists, matches_played, clean_sheets
       } = req.body;
       
@@ -89,7 +89,7 @@ async function startServer() {
         id: user.id, // Must match auth user ID
         full_name, date_of_birth, nationality, position, 
         secondary_position, preferred_foot, height_cm, 
-        weight_kg, current_club, bio, highlight_video_url,
+        weight_kg, current_club, bio, highlight_video_url, avatar_url,
         goals: goals || 0,
         assists: assists || 0,
         matches_played: matches_played || 0,
@@ -118,7 +118,7 @@ async function startServer() {
       const allowedFields = [
         'full_name', 'date_of_birth', 'nationality', 'position', 
         'secondary_position', 'preferred_foot', 'height_cm', 
-        'weight_kg', 'current_club', 'bio', 'highlight_video_url',
+        'weight_kg', 'current_club', 'bio', 'highlight_video_url', 'avatar_url',
         'goals', 'assists', 'matches_played', 'clean_sheets'
       ];
       
@@ -144,6 +144,46 @@ async function startServer() {
       res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  });
+
+  app.get('/api/players', requireAuth, async (req, res) => {
+    try {
+      const { search } = req.query;
+      let query = supabase.from('players').select('*');
+      
+      if (search && typeof search === 'string') {
+        query = query.or(`position.ilike.%${search}%,current_club.ilike.%${search}%,full_name.ilike.%${search}%`);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+      
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Internal server error' });
+    }
+  });
+
+  app.get('/api/players/:id', requireAuth, async (req, res, next) => {
+    // Avoid conflicting with /me
+    if (req.params.id === 'me') return next();
+    
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('id', req.params.id)
+        .single();
+        
+      if (error) throw error;
+      res.json(data);
+    } catch (error: any) {
+      if (error.code === 'PGRST116') {
+         res.status(404).json({ error: 'Profile not found' });
+      } else {
+        res.status(500).json({ error: error.message || 'Internal server error' });
+      }
     }
   });
 

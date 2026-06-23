@@ -14,6 +14,7 @@ CREATE TABLE public.players (
   current_club TEXT,
   bio TEXT,
   highlight_video_url TEXT,
+  avatar_url TEXT,
   goals INTEGER DEFAULT 0,
   assists INTEGER DEFAULT 0,
   matches_played INTEGER DEFAULT 0,
@@ -25,11 +26,11 @@ CREATE TABLE public.players (
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.players ENABLE ROW LEVEL SECURITY;
 
--- 1. Players can only SELECT their own profile
-CREATE POLICY "Players can view own profile" 
+-- 1. Players can view all profiles
+CREATE POLICY "Players can view all profiles" 
 ON public.players 
 FOR SELECT 
-USING (auth.uid() = id);
+USING (auth.role() = 'authenticated');
 
 -- 2. Players can only INSERT their own profile
 CREATE POLICY "Players can insert own profile" 
@@ -57,3 +58,23 @@ CREATE TRIGGER update_players_updated_at
 BEFORE UPDATE ON public.players
 FOR EACH ROW
 EXECUTE FUNCTION update_modified_column();
+
+-- Set up Storage for avatars
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+
+CREATE POLICY "Avatar images are publicly accessible."
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'avatars' );
+
+CREATE POLICY "Anyone can upload an avatar."
+ON storage.objects FOR INSERT
+WITH CHECK ( bucket_id = 'avatars' AND auth.role() = 'authenticated' );
+
+CREATE POLICY "Anyone can update their own avatar."
+ON storage.objects FOR UPDATE
+USING ( auth.uid() = owner )
+WITH CHECK ( bucket_id = 'avatars' AND auth.role() = 'authenticated' );
+
+CREATE POLICY "Anyone can delete their own avatar."
+ON storage.objects FOR DELETE
+USING ( auth.uid() = owner AND bucket_id = 'avatars' );

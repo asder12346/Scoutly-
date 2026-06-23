@@ -24,6 +24,11 @@ export default function Layout() {
             Scoutly
           </Link>
           <div className="flex items-center space-x-5">
+            {location.pathname !== '/browse' && (
+              <Link to="/browse" className="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+                Browse
+              </Link>
+            )}
             {location.pathname === '/profile' && (
               <Link to="/profile/edit" className="text-sm font-semibold text-[#22C55E] hover:text-green-600 transition-colors">
                 Edit
