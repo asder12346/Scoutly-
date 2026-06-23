@@ -45,6 +45,16 @@ export default function BrowsePlayers({ session }: BrowsePlayersProps) {
     fetchPlayers(searchQuery);
   };
 
+  const getPositionColor = (pos: string) => {
+    if (!pos) return 'bg-slate-100 text-slate-600 border-slate-200';
+    const lower = pos.toLowerCase();
+    if (lower.includes('gk') || lower.includes('goal')) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (lower.includes('cb') || lower.includes('lb') || lower.includes('rb') || lower.includes('def') || lower.includes('back')) return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (lower.includes('cm') || lower.includes('cdm') || lower.includes('cam') || lower.includes('mid')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (lower.includes('st') || lower.includes('lw') || lower.includes('rw') || lower.includes('for') || lower.includes('strike') || lower.includes('wing')) return 'bg-red-100 text-red-700 border-red-200';
+    return 'bg-slate-100 text-slate-600 border-slate-200';
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <div className="text-center pt-2 mb-4">
@@ -85,13 +95,12 @@ export default function BrowsePlayers({ session }: BrowsePlayersProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-base font-bold text-slate-900 group-hover:text-[#22C55E] transition-colors truncate tracking-tight">{player.full_name}</p>
-                <div className="flex items-center text-xs text-slate-500 mt-0.5 space-x-1 font-medium">
-                  <span className="truncate">{player.position || 'Unknown Pos'}</span>
+                <div className="flex items-center mt-1.5 space-x-2">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getPositionColor(player.position)}`}>
+                    {player.position || 'Unknown Pos'}
+                  </span>
                   {player.current_club && (
-                    <>
-                      <span>•</span>
-                      <span className="truncate text-slate-700 font-bold">{player.current_club}</span>
-                    </>
+                    <span className="truncate text-xs text-slate-700 font-bold">{player.current_club}</span>
                   )}
                 </div>
               </div>
