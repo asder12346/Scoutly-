@@ -1,0 +1,6 @@
+{
+  "name": "Scoutly",
+  "description": "A platform connecting young football players with scouts, agents, and academies.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
